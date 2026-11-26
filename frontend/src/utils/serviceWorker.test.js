@@ -10,7 +10,7 @@ const SOURCE = readFileSync(new URL('../../public/sw.js', import.meta.url), 'utf
 const ID = '11111111-1111-4111-8111-111111111111';
 
 // Load sw.js against a fake service worker scope. `respond(path, init)` answers fetch.
-function loadWorker(respond = () => ({ ok: true, json: async () => ({}) }), windows = []) {
+function loadWorker(respond = () => ({ ok: true, json: async () => ({}) }), windows = [], OffscreenCanvas) {
   const listeners = {};
   const shown = [];
   const opened = [];
@@ -22,14 +22,14 @@ function loadWorker(respond = () => ({ ok: true, json: async () => ({}) }), wind
     location: { origin: 'https://mail.example' },
   };
   const fetch = async (path, init) => {
-    fetches.push({ path, ...init, body: JSON.parse(init.body) });
+    fetches.push({ path, ...init, body: init.body ? JSON.parse(init.body) : undefined });
     const res = respond(path, init);
     if (res instanceof Error) throw res;
     return res;
   };
   // No indexedDB: storePendingDeepLink's guard resolves at once. What the fakes record is copied
   // through JSON, so it compares as plain objects of this realm.
-  vm.runInNewContext(SOURCE, { self, fetch, URL, JSON, Promise, Array, encodeURIComponent });
+  vm.runInNewContext(SOURCE, { self, fetch, URL, JSON, Promise, Array, encodeURIComponent, AbortController, setTimeout, clearTimeout, btoa, OffscreenCanvas });
   const run = async (type, event) => {
     let done = Promise.resolve();
     listeners[type]({ ...event, waitUntil: p => { done = p; } });
@@ -113,4 +113,75 @@ test('a push tells every open tab, so one whose socket died still hears of the n
     { name: 'a', data: { type: 'mailflow_push' } },
     { name: 'b', data: { type: 'mailflow_push' } },
   ], 'a tab that cannot be reached does not stop the others');
+});
+
+test('localizes both existing actions without changing their identifiers', async () => {
+  const sw = loadWorker(() => ({ ok: true, json: async () => ({ archived: [], noArchiveFolder: ['acc'] }) }));
+  const actionLabels = { read: 'Marquer comme lu', archive: 'Archiver', noArchiveTitle: 'Aucun dossier', noArchiveBody: 'Pas de dossier Archive.' };
+  await sw.run('push', push({ title: 'Ann', body: 'Hi', messageId: ID, actionLabels }));
+  assert.deepEqual(sw.shown[0].options.actions, [{ action: 'read', title: actionLabels.read }, { action: 'archive', title: actionLabels.archive }]);
+  await sw.run('notificationclick', click('archive', sw.shown[0].options.data));
+  assert.equal(sw.shown[1].title, actionLabels.noArchiveTitle);
+});
+
+test('fetches contact photos only through authenticated same-origin endpoints', async () => {
+  const sw = loadWorker(() => ({ ok: true, status: 200, headers: { get: key => key === 'content-type' ? 'image/png' : '3' }, arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer }));
+  await sw.run('push', push({ title: 'Ann', body: 'Hi', messageId: ID, avatar: { email: 'ann@example.com' } }));
+  assert.equal(sw.fetches[0].path, '/api/contacts/photo?email=ann%40example.com');
+  assert.equal(sw.fetches[0].credentials, 'include');
+  assert.equal(sw.shown[0].options.icon, 'data:image/png;base64,AQID');
+});
+
+test('an expired session uses the MailFlow icon without further lookups', async () => {
+  const sw = loadWorker(() => ({ ok: false, status: 401 }));
+  await sw.run('push', push({ title: 'Ann', body: 'Hi', avatar: { email: 'ann@example.com', gravatar: true, favicon: true } }));
+  assert.equal(sw.fetches.length, 1);
+  assert.equal(sw.shown[0].options.icon, '/icon-512.png');
+});
+
+test('missing contact photos fall back to the logo when canvas is unavailable', async () => {
+  const sw = loadWorker(() => ({ ok: false, status: 404 }));
+  await sw.run('push', push({ title: 'Ann', body: 'Hi', avatar: { email: 'ann@example.com', gravatar: false, favicon: false } }));
+  assert.equal(sw.fetches.length, 1);
+  assert.equal(sw.shown[0].options.icon, '/icon-512.png');
+});
+
+test('avatar initials use the sender alone, not the account suffix', async () => {
+  let letters;
+  class Canvas {
+    getContext() { return { fillRect() {}, fillText(text) { letters = text; } }; }
+    async convertToBlob() { return { arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer }; }
+  }
+  const sw = loadWorker(() => ({ ok: false, status: 404 }), [], Canvas);
+  await sw.run('push', push({ title: 'Ann · Work', body: 'Hi', avatar: { email: 'ann@example.com', name: 'Ann' } }));
+  assert.equal(letters, 'A');
+  assert.equal(sw.shown[0].options.icon, 'data:image/png;base64,AQID');
+});
+
+test('the receiving account emoji never changes the notification action or badge', async () => {
+  const sw = loadWorker();
+  await sw.run('push', push({ title: 'Ann · 🏠 Personal', body: 'Hi', badge: '/badge-96.png', messageId: ID }));
+  assert.equal(sw.shown[0].title, 'Ann · 🏠 Personal');
+  assert.equal(sw.shown[0].options.badge, '/badge-96.png');
+  assert.equal(sw.shown[0].options.icon, '/icon-512.png');
+  assert.deepEqual(sw.shown[0].options.actions.map(a => a.action), ['read', 'archive']);
+  assert.deepEqual(sw.fetches, []);
+});
+
+test('sender avatar lookup respects contact, Gravatar and favicon preference order', async () => {
+  const sw = loadWorker(path => path.startsWith('/api/sender-favicons/')
+    ? { ok: true, status: 200, headers: { get: key => key === 'content-type' ? 'image/png' : '3' }, arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer }
+    : { ok: false, status: 404 });
+  await sw.run('push', push({ title: 'Ann · 🏠 Personal', body: 'Hi', avatar: { email: 'ann@example.com', name: 'Ann', gravatar: true, favicon: true } }));
+  assert.deepEqual(sw.fetches.map(f => f.path), ['/api/contacts/photo?email=ann%40example.com', '/api/contacts/gravatar?email=ann%40example.com', '/api/sender-favicons/example.com']);
+  assert.equal(sw.shown[0].options.icon, 'data:image/png;base64,AQID');
+});
+
+test('locked session or offline image fetch does not suppress the notification', async () => {
+  for (const response of [{ ok: false, status: 423 }, new Error('network')]) {
+    const sw = loadWorker(() => response);
+    await sw.run('push', push({ title: 'Ann', body: 'Hi', avatar: { email: 'ann@example.com' } }));
+    assert.equal(sw.shown.length, 1);
+    assert.equal(sw.shown[0].options.icon, '/icon-512.png');
+  }
 });

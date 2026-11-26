@@ -55,6 +55,7 @@ import PasswordInput from './PasswordInput.jsx';
 import ApiTokensSection from './ApiTokensSection.jsx';
 import WebhookSettings, { AdminWebhookSettings } from './WebhookSettings.jsx';
 import ToggleRow from './SettingsToggleRow.jsx';
+import PushAppearanceSettings from './PushAppearanceSettings.jsx';
 
 // ─── Shared field component ───────────────────────────────────────────────────
 function Field({ label, required, children }) {
@@ -5330,6 +5331,7 @@ function UsersAndInvitesPanel() {
 // ─── Push Notifications Section (inside NotificationsTab) ─────────────────────
 function PushNotificationsSection() {
   const { t } = useTranslation();
+  const userId = useStore(state => state.user?.id);
   const {
     supported, permission, subscribed, serverConfigured, loading,
     subscribe, unsubscribe,
@@ -5451,6 +5453,7 @@ function PushNotificationsSection() {
           )}
         </div>
       )}
+      {userId && <PushAppearanceSettings key={userId} userId={userId} />}
     </div>
   );
 }

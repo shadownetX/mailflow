@@ -17,7 +17,7 @@ describe('new mail Web Push', () => {
   it('uses the last eligible message and the user-wide unread badge', async () => {
     notifyNewMail({ userId: 'u', alertMessages: [{ subject: 'old' }, { id: 'm', fromName: 'Alice', subject: 'Hello' }], alertCount: 2 });
     await settle();
-    expect(query.mock.calls[0][1]).toEqual(['u']);
+    expect(query.mock.calls[0][1]).toEqual(['u', null]);
     expect(sendPushToUser).toHaveBeenCalledWith('u', {
       title: 'Alice', body: '2 new messages', icon: '/icon-512.png', badge: '/badge-96.png', url: '/?m=m', unreadCount: 7,
     });
@@ -56,4 +56,29 @@ it('starts webhook delivery independently of badge lookup and contains its error
   expect(warn).toHaveBeenCalledWith('Webhook notification unavailable');
   expect(sendPushToUser).not.toHaveBeenCalled();
   warn.mockRestore();
+});
+
+it('uses saved appearance and UI language in a single push', async () => {
+  query.mockResolvedValue({ rows: [{ total: 7, account_name: 'Personnel', account_icon: '🏠', preferences: { language: 'fr', pushAppearance: { avatar: true, account: true, preview: true }, senderFavicons: true } }] });
+  notifyNewMail({ userId: 'u', accountId: 'account-1', accountName: 'Old account name', alertMessages: [{ id: 'm', fromName: 'Ann', fromEmail: 'ann@example.com', subject: 'Salut', snippet: 'Un aperçu' }], alertCount: 1 });
+  await settle();
+  expect(query.mock.calls[0][1]).toEqual(['u', 'account-1']);
+  expect(query.mock.calls[0][0]).toContain('source.user_id = u.id');
+  expect(sendPushToUser).toHaveBeenCalledWith('u', expect.objectContaining({
+    title: 'Ann · 🏠 Personnel', body: 'Salut\nUn aperçu', messageId: 'm', unreadCount: 7,
+    actionLabels: expect.objectContaining({ read: 'Marquer comme lu', archive: 'Archiver' }),
+    avatar: { email: 'ann@example.com', name: 'Ann', gravatar: false, favicon: true },
+  }));
+});
+
+it('does not expose body excerpts or avatar requests for a grouped alert', async () => {
+  query.mockResolvedValue({ rows: [{ total: 7, account_name: 'Personnel', account_icon: '💼', preferences: { language: 'fr', pushAppearance: { avatar: true, account: true, preview: true } } }] });
+  notifyNewMail({ userId: 'u', accountId: 'account-1', accountName: 'Personnel', alertMessages: [{ id: 'm', fromName: 'Ann', snippet: 'Private excerpt' }], alertCount: 2 });
+  await settle();
+  const payload = sendPushToUser.mock.calls[0][1];
+  expect(payload.title).toBe('Ann · 💼 Personnel');
+  expect(payload.body).toBe('2 nouveaux messages');
+  expect(payload).not.toHaveProperty('avatar');
+  expect(payload).not.toHaveProperty('messageId');
+  expect(payload).not.toHaveProperty('actionLabels');
 });

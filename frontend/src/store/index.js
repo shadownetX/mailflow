@@ -1494,6 +1494,9 @@ export const useStore = create((set, get) => ({
         localStorage.setItem('mailflow_language', prefs.language);
         set({ language: prefs.language });
         i18n.changeLanguage(prefs.language);
+      } else if (userId) {
+        // Persist the initially detected UI language for background Web Push.
+        schedulePrefSave({ language: get().language });
       }
       if (['auto', '12', '24'].includes(prefs.timeFormat)) {
         localStorage.setItem('mailflow_time_format', prefs.timeFormat);
