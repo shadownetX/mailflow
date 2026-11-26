@@ -1449,6 +1449,17 @@
       "badgeOff": "Disabled"
     },
     "push": {
+      "appearanceTitle": "Notification appearance",
+      "avatar": "Sender avatar",
+      "avatarDesc": "Use contact photos and enabled sender icons when available.",
+      "receivingAccount": "Receiving account",
+      "receivingAccountDesc": "Show the name of the account that received the message.",
+      "contentPreview": "Message content preview",
+      "contentPreviewDesc": "Show a short excerpt on your device, including on the lock screen if the operating system allows it.",
+      "appearanceError": "Could not save notification appearance. Try again.",
+      "previewTitle": "Notification preview",
+      "exampleAccount": "Personal",
+      "newMessages": "{{count}} new messages",
       "title": "Push Notifications",
       "description": "Receive native notifications for new mail even when MailFlow isn't open.",
       "enable": "Enable",

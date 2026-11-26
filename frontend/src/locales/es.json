@@ -1449,6 +1449,17 @@
       "badgeOff": "Desactivado"
     },
     "push": {
+      "appearanceTitle": "Aspecto de las notificaciones",
+      "avatar": "Avatar del remitente",
+      "avatarDesc": "Usar fotos de contactos e iconos de remitentes activados cuando estén disponibles.",
+      "receivingAccount": "Cuenta receptora",
+      "receivingAccountDesc": "Mostrar el nombre de la cuenta que recibió el mensaje.",
+      "contentPreview": "Vista previa del contenido",
+      "contentPreviewDesc": "Mostrar un breve extracto en el dispositivo, incluso en la pantalla de bloqueo si el sistema lo permite.",
+      "appearanceError": "No se pudo guardar el aspecto de las notificaciones. Inténtalo de nuevo.",
+      "previewTitle": "Vista previa de la notificación",
+      "exampleAccount": "Cuenta personal",
+      "newMessages": "{{count}} mensajes nuevos",
       "title": "Notificaciones push",
       "description": "Recibe notificaciones nativas de correo nuevo aunque MailFlow no esté abierto.",
       "enable": "Activar",

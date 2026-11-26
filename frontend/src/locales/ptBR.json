@@ -1449,6 +1449,17 @@
       "badgeOff": "Desativado"
     },
     "push": {
+      "appearanceTitle": "Aparência das notificações",
+      "avatar": "Avatar do remetente",
+      "avatarDesc": "Usar fotos dos contatos e ícones de remetentes ativados quando disponíveis.",
+      "receivingAccount": "Conta de destino",
+      "receivingAccountDesc": "Mostrar o nome da conta que recebeu a mensagem.",
+      "contentPreview": "Prévia do conteúdo",
+      "contentPreviewDesc": "Mostrar um breve trecho no dispositivo, inclusive na tela de bloqueio se o sistema permitir.",
+      "appearanceError": "Não foi possível salvar a aparência das notificações. Tente novamente.",
+      "previewTitle": "Prévia da notificação",
+      "exampleAccount": "Pessoal",
+      "newMessages": "{{count}} novas mensagens",
       "title": "Notificações push",
       "description": "Receba notificações nativas de novos e-mails mesmo quando o MailFlow não estiver aberto.",
       "enable": "Ativar",

@@ -1449,6 +1449,17 @@
       "badgeOff": "已禁用"
     },
     "push": {
+      "appearanceTitle": "通知外观",
+      "avatar": "发件人头像",
+      "avatarDesc": "在可用时使用联系人照片和已启用的发件人图标。",
+      "receivingAccount": "收件账户",
+      "receivingAccountDesc": "显示收到邮件的账户名称。",
+      "contentPreview": "邮件内容预览",
+      "contentPreviewDesc": "在设备上显示简短摘要；如果系统允许，也会在锁定屏幕上显示。",
+      "appearanceError": "无法保存通知外观，请重试。",
+      "previewTitle": "通知预览",
+      "exampleAccount": "个人",
+      "newMessages": "{{count}} 封新邮件",
       "title": "推送通知",
       "description": "即使 MailFlow 未打开，也能在收到新邮件时接收系统原生通知。",
       "enable": "启用",
