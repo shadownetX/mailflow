@@ -20,13 +20,21 @@ describe('push appearance', () => {
   });
   it('does not add body content unless explicitly enabled', () => {
     const payload = enrichPushPayload(base, latest, 1, 'Work', { pushAppearance: { avatar: true, account: true, preview: false } });
-    expect(payload.body).toBe('Work\nSubject');
-    expect(payload.avatar).toEqual({ email: 'ann@example.com', favicon: false, gravatar: false });
+    expect(payload.title).toBe('Ann · Work');
+    expect(payload.body).toBe('Subject');
+    expect(payload.avatar).toEqual({ email: 'ann@example.com', name: 'Ann', favicon: false, gravatar: false });
     expect(JSON.stringify(payload)).not.toContain('Secret');
+  });
+  it('omits a missing account and retains the sender separately for avatar initials', () => {
+    const payload = enrichPushPayload(base, latest, 1, '   ', { pushAppearance: { avatar: true, account: true, preview: true } });
+    expect(payload.title).toBe('Ann');
+    expect(payload.body).toBe('Subject\nSecret');
+    expect(payload.avatar.name).toBe('Ann');
   });
   it('bounds unusually large notifications', () => {
     const payload = enrichPushPayload({ ...base, title: '😀'.repeat(500), body: '😀'.repeat(500) }, { ...latest, snippet: '😀'.repeat(500) }, 1, '😀'.repeat(500), { pushAppearance: { avatar: true, account: true, preview: true } });
     expect(Array.from(payload.title)).toHaveLength(120);
-    expect(Array.from(payload.body)).toHaveLength(422);
+    expect(Array.from(payload.body)).toHaveLength(361);
+    expect(payload.title.endsWith(' · ' + '😀'.repeat(60))).toBe(true);
   });
 });

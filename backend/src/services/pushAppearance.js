@@ -46,16 +46,20 @@ export function enrichPushPayload(base, latest, count, accountName, preferences 
       };
     }
   }
-  const parts = [];
-  if (appearance.account && bounded(accountName, 60)) parts.push(bounded(accountName, 60));
-  parts.push(bounded(payload.body, 200));
+  const parts = [bounded(payload.body, 200)];
   // Grouped alerts must not expose one arbitrary message's content.
   if (appearance.preview && count === 1 && bounded(latest.snippet, 160)) parts.push(bounded(latest.snippet, 160));
   payload.body = parts.join('\n');
-  payload.title = bounded(payload.title, 120);
+  const sender = bounded(payload.title, 120);
+  const account = appearance.account ? bounded(accountName, 60) : '';
+  // Keep the account in the title, preserving space for both values within the payload limit.
+  payload.title = account
+    ? `${bounded(sender, 120 - 3 - Array.from(account).length)} · ${account}`
+    : sender;
   if (appearance.avatar && count === 1) {
     payload.avatar = {
       email: bounded(latest.fromEmail, 254),
+      name: sender,
       gravatar: preferences.gravatarAvatars === true,
       favicon: preferences.senderFavicons === true,
     };

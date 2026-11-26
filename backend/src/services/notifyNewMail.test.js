@@ -63,9 +63,9 @@ it('uses saved appearance and UI language in a single push', async () => {
   notifyNewMail({ userId: 'u', accountName: 'Personnel', alertMessages: [{ id: 'm', fromName: 'Ann', fromEmail: 'ann@example.com', subject: 'Salut', snippet: 'Un aperçu' }], alertCount: 1 });
   await settle();
   expect(sendPushToUser).toHaveBeenCalledWith('u', expect.objectContaining({
-    title: 'Ann', body: 'Personnel\nSalut\nUn aperçu', messageId: 'm', unreadCount: 7,
+    title: 'Ann · Personnel', body: 'Salut\nUn aperçu', messageId: 'm', unreadCount: 7,
     actionLabels: expect.objectContaining({ read: 'Marquer comme lu', archive: 'Archiver' }),
-    avatar: { email: 'ann@example.com', gravatar: false, favicon: true },
+    avatar: { email: 'ann@example.com', name: 'Ann', gravatar: false, favicon: true },
   }));
 });
 
@@ -74,7 +74,8 @@ it('does not expose body excerpts or avatar requests for a grouped alert', async
   notifyNewMail({ userId: 'u', accountName: 'Personnel', alertMessages: [{ id: 'm', fromName: 'Ann', snippet: 'Private excerpt' }], alertCount: 2 });
   await settle();
   const payload = sendPushToUser.mock.calls[0][1];
-  expect(payload.body).toBe('Personnel\n2 nouveaux messages');
+  expect(payload.title).toBe('Ann · Personnel');
+  expect(payload.body).toBe('2 nouveaux messages');
   expect(payload).not.toHaveProperty('avatar');
   expect(payload).not.toHaveProperty('messageId');
   expect(payload).not.toHaveProperty('actionLabels');

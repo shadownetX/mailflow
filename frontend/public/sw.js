@@ -79,7 +79,7 @@ async function resolvePushIcon(avatar, title, fallback) {
       }
     } finally { clearTimeout(timer); }
   } catch { /* optional image path unsupported */ }
-  return (await initialsIcon(title)) || fallback;
+  return (await initialsIcon(avatar.name || title)) || fallback;
 }
 
 function localizedActions(labels) {

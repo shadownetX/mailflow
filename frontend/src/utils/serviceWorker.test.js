@@ -10,7 +10,7 @@ const SOURCE = readFileSync(new URL('../../public/sw.js', import.meta.url), 'utf
 const ID = '11111111-1111-4111-8111-111111111111';
 
 // Load sw.js against a fake service worker scope. `respond(path, init)` answers fetch.
-function loadWorker(respond = () => ({ ok: true, json: async () => ({}) }), windows = []) {
+function loadWorker(respond = () => ({ ok: true, json: async () => ({}) }), windows = [], OffscreenCanvas) {
   const listeners = {};
   const shown = [];
   const opened = [];
@@ -29,7 +29,7 @@ function loadWorker(respond = () => ({ ok: true, json: async () => ({}) }), wind
   };
   // No indexedDB: storePendingDeepLink's guard resolves at once. What the fakes record is copied
   // through JSON, so it compares as plain objects of this realm.
-  vm.runInNewContext(SOURCE, { self, fetch, URL, JSON, Promise, Array, encodeURIComponent, AbortController, setTimeout, clearTimeout, btoa });
+  vm.runInNewContext(SOURCE, { self, fetch, URL, JSON, Promise, Array, encodeURIComponent, AbortController, setTimeout, clearTimeout, btoa, OffscreenCanvas });
   const run = async (type, event) => {
     let done = Promise.resolve();
     listeners[type]({ ...event, waitUntil: p => { done = p; } });
@@ -144,4 +144,16 @@ test('missing contact photos fall back to the logo when canvas is unavailable', 
   await sw.run('push', push({ title: 'Ann', body: 'Hi', avatar: { email: 'ann@example.com', gravatar: false, favicon: false } }));
   assert.equal(sw.fetches.length, 1);
   assert.equal(sw.shown[0].options.icon, '/icon-512.png');
+});
+
+test('avatar initials use the sender alone, not the account suffix', async () => {
+  let letters;
+  class Canvas {
+    getContext() { return { fillRect() {}, fillText(text) { letters = text; } }; }
+    async convertToBlob() { return { arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer }; }
+  }
+  const sw = loadWorker(() => ({ ok: false, status: 404 }), [], Canvas);
+  await sw.run('push', push({ title: 'Ann · Work', body: 'Hi', avatar: { email: 'ann@example.com', name: 'Ann' } }));
+  assert.equal(letters, 'A');
+  assert.equal(sw.shown[0].options.icon, 'data:image/png;base64,AQID');
 });
