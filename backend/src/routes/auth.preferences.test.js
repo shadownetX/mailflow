@@ -280,3 +280,19 @@ describe('PATCH /auth/preferences timeFormat (#758)', () => {
     expect(query.mock.calls[0][1][48]).toBeNull();
   });
 });
+
+describe('PATCH /auth/preferences pushAppearance', () => {
+  it('persists only the complete appearance object without changing other preferences', async () => {
+    const pushAppearance = { avatar: true, account: true, preview: false };
+    const res = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+    await patchPreferences({ session: { userId: 'user-1' }, body: { pushAppearance } }, res);
+    expect(query.mock.calls[0][0]).toContain("jsonb_build_object('pushAppearance', $51::jsonb)");
+    expect(JSON.parse(query.mock.calls[0][1][50])).toEqual(pushAppearance);
+  });
+  it.each([null, { avatar: true }, { avatar: true, account: true, preview: 'yes' }, { avatar: true, account: true, preview: false, delete: true }])('rejects invalid appearance settings: %j', async pushAppearance => {
+    const res = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+    await patchPreferences({ session: { userId: 'user-1' }, body: { pushAppearance } }, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(query).not.toHaveBeenCalled();
+  });
+});

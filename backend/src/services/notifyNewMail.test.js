@@ -57,3 +57,25 @@ it('starts webhook delivery independently of badge lookup and contains its error
   expect(sendPushToUser).not.toHaveBeenCalled();
   warn.mockRestore();
 });
+
+it('uses saved appearance and UI language in a single push', async () => {
+  query.mockResolvedValue({ rows: [{ total: 7, preferences: { language: 'fr', pushAppearance: { avatar: true, account: true, preview: true }, senderFavicons: true } }] });
+  notifyNewMail({ userId: 'u', accountName: 'Personnel', alertMessages: [{ id: 'm', fromName: 'Ann', fromEmail: 'ann@example.com', subject: 'Salut', snippet: 'Un aperçu' }], alertCount: 1 });
+  await settle();
+  expect(sendPushToUser).toHaveBeenCalledWith('u', expect.objectContaining({
+    title: 'Ann', body: 'Personnel\nSalut\nUn aperçu', messageId: 'm', unreadCount: 7,
+    actionLabels: expect.objectContaining({ read: 'Marquer comme lu', archive: 'Archiver' }),
+    avatar: { email: 'ann@example.com', gravatar: false, favicon: true },
+  }));
+});
+
+it('does not expose body excerpts or avatar requests for a grouped alert', async () => {
+  query.mockResolvedValue({ rows: [{ total: 7, preferences: { language: 'fr', pushAppearance: { avatar: true, account: true, preview: true } } }] });
+  notifyNewMail({ userId: 'u', accountName: 'Personnel', alertMessages: [{ id: 'm', fromName: 'Ann', snippet: 'Private excerpt' }], alertCount: 2 });
+  await settle();
+  const payload = sendPushToUser.mock.calls[0][1];
+  expect(payload.body).toBe('Personnel\n2 nouveaux messages');
+  expect(payload).not.toHaveProperty('avatar');
+  expect(payload).not.toHaveProperty('messageId');
+  expect(payload).not.toHaveProperty('actionLabels');
+});

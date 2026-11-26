@@ -19,6 +19,75 @@ const MESSAGE_ACTIONS = [
   { action: 'archive', title: 'Archive' },
 ];
 
+// Only MailFlow's authenticated, same-origin avatar endpoints are used.
+function bytesToIcon(type, buffer) {
+  const bytes = new Uint8Array(buffer);
+  if (!bytes.length || bytes.length > 131072) return null;
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 8192) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+  }
+  return 'data:' + type + ';base64,' + btoa(binary);
+}
+
+async function initialsIcon(title) {
+  try {
+    const canvas = new OffscreenCanvas(96, 96);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    const name = typeof title === 'string' ? title.trim() : '';
+    const letters = name.split(/\s+/u).slice(0, 2).map(word => Array.from(word)[0] || '').join('').toUpperCase();
+    if (!letters) return null;
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(0, 0, 96, 96);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 42px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(letters, 48, 49);
+    const blob = await canvas.convertToBlob({ type: 'image/png' });
+    return bytesToIcon('image/png', await blob.arrayBuffer());
+  } catch { return null; }
+}
+
+async function resolvePushIcon(avatar, title, fallback) {
+  if (!avatar) return fallback;
+  const email = typeof avatar.email === 'string' ? avatar.email.trim() : '';
+  const candidates = [];
+  if (email.length <= 254 && /^[^\s@]+@[^\s@]+$/u.test(email)) {
+    const encoded = encodeURIComponent(email);
+    candidates.push('/api/contacts/photo?email=' + encoded);
+    if (avatar.gravatar === true) candidates.push('/api/contacts/gravatar?email=' + encoded);
+    if (avatar.favicon === true) candidates.push('/api/sender-favicons/' + encodeURIComponent(email.split('@')[1]));
+  }
+  // Bound the extra work; a missing avatar must never block the notification.
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 1500);
+    try {
+      for (const path of candidates) {
+        if (controller.signal.aborted) break;
+        try {
+          const response = await fetch(path, { credentials: 'include', redirect: 'error', cache: 'no-store', signal: controller.signal });
+          if (response.status === 401 || response.status === 423) return fallback;
+          const type = response.headers?.get('content-type')?.split(';')[0].trim().toLowerCase();
+          const length = Number(response.headers?.get('content-length'));
+          if (!response.ok || !['image/png', 'image/jpeg', 'image/webp'].includes(type) || length > 131072) continue;
+          const icon = bytesToIcon(type, await response.arrayBuffer());
+          if (icon) return icon;
+        } catch { /* next candidate or initials */ }
+      }
+    } finally { clearTimeout(timer); }
+  } catch { /* optional image path unsupported */ }
+  return (await initialsIcon(title)) || fallback;
+}
+
+function localizedActions(labels) {
+  return MESSAGE_ACTIONS.map(item => ({
+    ...item, title: typeof labels?.[item.action] === 'string' && labels[item.action] ? labels[item.action] : item.title,
+  }));
+}
+
 self.addEventListener('push', (event) => {
   if (!event.data) return;
 
@@ -37,6 +106,8 @@ self.addEventListener('push', (event) => {
     url         = '/',
     messageId,            // only for a push about one message: enables the action buttons
     unreadCount,          // intentionally no default — undefined means "don't touch badge"
+    avatar,
+    actionLabels,
   } = data;
 
   event.waitUntil(
@@ -64,19 +135,19 @@ self.addEventListener('push', (event) => {
         // user-visible-notification violation and will eventually revoke push permission.
         // The in-app WebSocket toast still fires independently via the open client.
         promises.push(
-          self.registration.showNotification(title, {
+          resolvePushIcon(avatar, title, icon).then(resolvedIcon => self.registration.showNotification(title, {
             body,
-            icon,
+            icon: resolvedIcon,
             badge,
-            data:  { url, messageId },
+            data:  { url, messageId, ...(actionLabels ? { actionLabels } : {}) },
             // Mark as read / Archive act on the one message the card is about (#689).
             // Browsers that don't support actions (Safari) drop them and show the card as before.
-            ...(messageId ? { actions: MESSAGE_ACTIONS } : {}),
+            ...(messageId ? { actions: localizedActions(actionLabels) } : {}),
             // Replace any existing MailFlow notification so rapid arrivals
             // don't stack unboundedly in the notification center.
             tag:      'mailflow-new-mail',
             renotify: true,
-          })
+          }))
         );
 
         // Tell every open MailFlow tab a push came. The push did not use the tab's socket, so a
@@ -180,8 +251,9 @@ self.addEventListener('notificationclick', (event) => {
     event.waitUntil(runMessageAction(event.action, messageId).then((outcome) => {
       if (outcome === 'done') return undefined;
       if (outcome === 'no-archive-folder') {
-        return self.registration.showNotification('Not archived', {
-          body: 'This account has no Archive folder. Tap to open the message.',
+        const labels = event.notification.data?.actionLabels;
+        return self.registration.showNotification(labels?.noArchiveTitle || 'Not archived', {
+          body: labels?.noArchiveBody || 'This account has no Archive folder. Tap to open the message.',
           icon: '/icon-512.png',
           badge: '/badge-96.png',
           data: { url: targetUrl },

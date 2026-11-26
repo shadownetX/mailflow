@@ -7,6 +7,7 @@ import { query, pool, withTransaction } from '../services/db.js';
 import { imapManager } from '../index.js';
 import { decrypt, encrypt } from '../services/encryption.js';
 import { pushConfigured } from '../services/pushNotifications.js';
+import { validPushAppearance } from '../services/pushAppearance.js';
 import { validateHost, resolveForConnection } from '../services/hostValidation.js';
 import { createSmtpTransport } from '../services/smtpTransport.js';
 import { getConnectionPolicy } from '../services/connectionPolicy.js';
@@ -695,7 +696,11 @@ export async function patchPreferences(req, res) {
           autoLockMinutes, showMobileAvatars, gravatarAvatars, folderSyncInterval,
           folderOrder, senderFavicons, showMessagePreviews, defaultSender,
           conversationMode, hoverActionSet, autoOpenReplyDrafts, afterRemove, darkEmailBodies, listSort,
-          timeFormat, sessionDays } = req.body;
+          timeFormat, sessionDays, pushAppearance } = req.body;
+  if (pushAppearance !== undefined && !validPushAppearance(pushAppearance)) {
+    return res.status(400).json({ error: 'pushAppearance must contain avatar, account and preview booleans' });
+  }
+  const pushAppearanceJson = pushAppearance === undefined ? null : JSON.stringify(pushAppearance);
   if (autoOpenReplyDrafts !== undefined && typeof autoOpenReplyDrafts !== 'boolean') {
     return res.status(400).json({ error: 'autoOpenReplyDrafts must be a boolean' });
   }
@@ -830,6 +835,7 @@ export async function patchPreferences(req, res) {
       || CASE WHEN $48::jsonb IS NOT NULL THEN jsonb_build_object('listSort', $48::jsonb) ELSE '{}'::jsonb END
       || CASE WHEN $49::text IS NOT NULL THEN jsonb_build_object('timeFormat', $49::text) ELSE '{}'::jsonb END
       || CASE WHEN $50::int IS NOT NULL THEN jsonb_build_object('sessionDays', $50::int) ELSE '{}'::jsonb END
+      || CASE WHEN $51::jsonb IS NOT NULL THEN jsonb_build_object('pushAppearance', $51::jsonb) ELSE '{}'::jsonb END
     WHERE id = $1
   `, [req.session.userId, theme ?? null, font ?? null, layout ?? null, notificationSound ?? null,
       pageSize ?? null, scrollMode ?? null, syncInterval ?? null,
@@ -841,7 +847,7 @@ export async function patchPreferences(req, res) {
       rightSidebarWidth, rightSidebarHidden, gtdCollapsedSectionsJson, gtdPetSlug, autoLockMinutesVal,
       showMobileAvatars ?? null, gravatarAvatars ?? null, folderSyncIntervalVal, folderOrderJson, senderFaviconsVal,
       showMessagePreviews ?? null, defaultSenderVal, conversationModeVal, hoverActionSetJson, autoOpenReplyDrafts ?? null,
-      afterRemoveVal, darkEmailBodies ?? null, listSortJson, timeFormatVal, sessionDaysVal]);
+      afterRemoveVal, darkEmailBodies ?? null, listSortJson, timeFormatVal, sessionDaysVal, pushAppearanceJson]);
 
   if (sessionDaysVal != null) {
     rememberSessionDays(req.session.userId, sessionDaysVal);

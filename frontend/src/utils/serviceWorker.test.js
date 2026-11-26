@@ -22,14 +22,14 @@ function loadWorker(respond = () => ({ ok: true, json: async () => ({}) }), wind
     location: { origin: 'https://mail.example' },
   };
   const fetch = async (path, init) => {
-    fetches.push({ path, ...init, body: JSON.parse(init.body) });
+    fetches.push({ path, ...init, body: init.body ? JSON.parse(init.body) : undefined });
     const res = respond(path, init);
     if (res instanceof Error) throw res;
     return res;
   };
   // No indexedDB: storePendingDeepLink's guard resolves at once. What the fakes record is copied
   // through JSON, so it compares as plain objects of this realm.
-  vm.runInNewContext(SOURCE, { self, fetch, URL, JSON, Promise, Array, encodeURIComponent });
+  vm.runInNewContext(SOURCE, { self, fetch, URL, JSON, Promise, Array, encodeURIComponent, AbortController, setTimeout, clearTimeout, btoa });
   const run = async (type, event) => {
     let done = Promise.resolve();
     listeners[type]({ ...event, waitUntil: p => { done = p; } });
@@ -113,4 +113,35 @@ test('a push tells every open tab, so one whose socket died still hears of the n
     { name: 'a', data: { type: 'mailflow_push' } },
     { name: 'b', data: { type: 'mailflow_push' } },
   ], 'a tab that cannot be reached does not stop the others');
+});
+
+test('localizes both existing actions without changing their identifiers', async () => {
+  const sw = loadWorker(() => ({ ok: true, json: async () => ({ archived: [], noArchiveFolder: ['acc'] }) }));
+  const actionLabels = { read: 'Marquer comme lu', archive: 'Archiver', noArchiveTitle: 'Aucun dossier', noArchiveBody: 'Pas de dossier Archive.' };
+  await sw.run('push', push({ title: 'Ann', body: 'Hi', messageId: ID, actionLabels }));
+  assert.deepEqual(sw.shown[0].options.actions, [{ action: 'read', title: actionLabels.read }, { action: 'archive', title: actionLabels.archive }]);
+  await sw.run('notificationclick', click('archive', sw.shown[0].options.data));
+  assert.equal(sw.shown[1].title, actionLabels.noArchiveTitle);
+});
+
+test('fetches contact photos only through authenticated same-origin endpoints', async () => {
+  const sw = loadWorker(() => ({ ok: true, status: 200, headers: { get: key => key === 'content-type' ? 'image/png' : '3' }, arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer }));
+  await sw.run('push', push({ title: 'Ann', body: 'Hi', messageId: ID, avatar: { email: 'ann@example.com' } }));
+  assert.equal(sw.fetches[0].path, '/api/contacts/photo?email=ann%40example.com');
+  assert.equal(sw.fetches[0].credentials, 'include');
+  assert.equal(sw.shown[0].options.icon, 'data:image/png;base64,AQID');
+});
+
+test('an expired session uses the MailFlow icon without further lookups', async () => {
+  const sw = loadWorker(() => ({ ok: false, status: 401 }));
+  await sw.run('push', push({ title: 'Ann', body: 'Hi', avatar: { email: 'ann@example.com', gravatar: true, favicon: true } }));
+  assert.equal(sw.fetches.length, 1);
+  assert.equal(sw.shown[0].options.icon, '/icon-512.png');
+});
+
+test('missing contact photos fall back to the logo when canvas is unavailable', async () => {
+  const sw = loadWorker(() => ({ ok: false, status: 404 }));
+  await sw.run('push', push({ title: 'Ann', body: 'Hi', avatar: { email: 'ann@example.com', gravatar: false, favicon: false } }));
+  assert.equal(sw.fetches.length, 1);
+  assert.equal(sw.shown[0].options.icon, '/icon-512.png');
 });
