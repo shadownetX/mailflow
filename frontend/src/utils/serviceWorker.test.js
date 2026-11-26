@@ -157,3 +157,31 @@ test('avatar initials use the sender alone, not the account suffix', async () =>
   assert.equal(letters, 'A');
   assert.equal(sw.shown[0].options.icon, 'data:image/png;base64,AQID');
 });
+
+test('the receiving account emoji never changes the notification action or badge', async () => {
+  const sw = loadWorker();
+  await sw.run('push', push({ title: 'Ann · 🏠 Personal', body: 'Hi', badge: '/badge-96.png', messageId: ID }));
+  assert.equal(sw.shown[0].title, 'Ann · 🏠 Personal');
+  assert.equal(sw.shown[0].options.badge, '/badge-96.png');
+  assert.equal(sw.shown[0].options.icon, '/icon-512.png');
+  assert.deepEqual(sw.shown[0].options.actions.map(a => a.action), ['read', 'archive']);
+  assert.deepEqual(sw.fetches, []);
+});
+
+test('sender avatar lookup respects contact, Gravatar and favicon preference order', async () => {
+  const sw = loadWorker(path => path.startsWith('/api/sender-favicons/')
+    ? { ok: true, status: 200, headers: { get: key => key === 'content-type' ? 'image/png' : '3' }, arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer }
+    : { ok: false, status: 404 });
+  await sw.run('push', push({ title: 'Ann · 🏠 Personal', body: 'Hi', avatar: { email: 'ann@example.com', name: 'Ann', gravatar: true, favicon: true } }));
+  assert.deepEqual(sw.fetches.map(f => f.path), ['/api/contacts/photo?email=ann%40example.com', '/api/contacts/gravatar?email=ann%40example.com', '/api/sender-favicons/example.com']);
+  assert.equal(sw.shown[0].options.icon, 'data:image/png;base64,AQID');
+});
+
+test('locked session or offline image fetch does not suppress the notification', async () => {
+  for (const response of [{ ok: false, status: 423 }, new Error('network')]) {
+    const sw = loadWorker(() => response);
+    await sw.run('push', push({ title: 'Ann', body: 'Hi', avatar: { email: 'ann@example.com' } }));
+    assert.equal(sw.shown.length, 1);
+    assert.equal(sw.shown[0].options.icon, '/icon-512.png');
+  }
+});

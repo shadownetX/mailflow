@@ -58,3 +58,21 @@ describe('push appearance', () => {
     expect(payload.title.endsWith(' · ' + '😀'.repeat(60))).toBe(true);
   });
 });
+
+describe('independent push appearance options', () => {
+  for (const avatar of [false, true]) {
+    for (const account of [false, true]) {
+      for (const preview of [false, true]) {
+        it(`avatar=${avatar}, account=${account}, preview=${preview}`, () => {
+          const payload = enrichPushPayload(base, latest, 1, 'Work', { language: 'fr', pushAppearance: { avatar, account, preview } }, '💼');
+          expect(payload.title).toBe(account ? 'Ann · 💼 Work' : 'Ann');
+          expect(payload.body).toBe(preview ? 'Subject\nSecret' : 'Subject');
+          expect(Boolean(payload.avatar)).toBe(avatar);
+          expect(payload.messageId).toBe('m');
+          expect(payload.actionLabels.read).toBe('Marquer comme lu');
+          expect(payload.actionLabels.archive).toBe('Archiver');
+        });
+      }
+    }
+  }
+});
