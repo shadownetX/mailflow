@@ -1449,6 +1449,9 @@
       "badgeOff": "Disattivato"
     },
     "push": {
+      "exampleSubject": "Verbale della riunione",
+      "exampleSnippet": "Ciao, ecco il verbale della nostra riunione di stamattina.",
+      "exampleNow": "adesso",
       "appearanceTitle": "Aspetto delle notifiche",
       "avatar": "Avatar del mittente",
       "avatarDesc": "Usa le foto dei contatti e le icone dei mittenti abilitate quando disponibili.",

@@ -1449,6 +1449,9 @@
       "badgeOff": "Disabled"
     },
     "push": {
+      "exampleSubject": "Meeting notes",
+      "exampleSnippet": "Hello, here are the notes from our meeting this morning.",
+      "exampleNow": "now",
       "appearanceTitle": "Notification appearance",
       "avatar": "Sender avatar",
       "avatarDesc": "Use contact photos and enabled sender icons when available.",

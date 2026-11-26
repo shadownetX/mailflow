@@ -1449,6 +1449,9 @@
       "badgeOff": "已禁用"
     },
     "push": {
+      "exampleSubject": "会议纪要",
+      "exampleSnippet": "你好，这是我们今天上午的会议纪要。",
+      "exampleNow": "刚刚",
       "appearanceTitle": "通知外观",
       "avatar": "发件人头像",
       "avatarDesc": "在可用时使用联系人照片和已启用的发件人图标。",

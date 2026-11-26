@@ -1449,6 +1449,9 @@
       "faviconBadgeDesc": "브라우저 탭 아이콘의 읽지 않은 개수입니다."
     },
     "push": {
+      "exampleSubject": "회의 기록",
+      "exampleSnippet": "안녕하세요, 오늘 아침 회의 내용을 정리해서 보냅니다.",
+      "exampleNow": "지금",
       "appearanceTitle": "알림 모양",
       "avatar": "보낸 사람 아바타",
       "avatarDesc": "사용 가능한 연락처 사진과 활성화된 발신자 아이콘을 사용합니다.",

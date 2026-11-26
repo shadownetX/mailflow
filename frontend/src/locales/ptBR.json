@@ -1449,6 +1449,9 @@
       "badgeOff": "Desativado"
     },
     "push": {
+      "exampleSubject": "Resumo da reunião",
+      "exampleSnippet": "Olá, segue o resumo da nossa reunião desta manhã.",
+      "exampleNow": "agora",
       "appearanceTitle": "Aparência das notificações",
       "avatar": "Avatar do remetente",
       "avatarDesc": "Usar fotos dos contatos e ícones de remetentes ativados quando disponíveis.",

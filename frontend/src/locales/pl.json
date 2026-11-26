@@ -1468,6 +1468,9 @@
       "badgeOff": "Wyłączone"
     },
     "push": {
+      "exampleSubject": "Notatki ze spotkania",
+      "exampleSnippet": "Cześć, przesyłam notatki z naszego dzisiejszego porannego spotkania.",
+      "exampleNow": "teraz",
       "appearanceTitle": "Wygląd powiadomień",
       "avatar": "Awatar nadawcy",
       "avatarDesc": "Używaj zdjęć kontaktów i włączonych ikon nadawców, jeśli są dostępne.",

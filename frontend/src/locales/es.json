@@ -1449,6 +1449,9 @@
       "badgeOff": "Desactivado"
     },
     "push": {
+      "exampleSubject": "Acta de la reunión",
+      "exampleSnippet": "Hola, aquí tienes el acta de nuestra reunión de esta mañana.",
+      "exampleNow": "ahora",
       "appearanceTitle": "Aspecto de las notificaciones",
       "avatar": "Avatar del remitente",
       "avatarDesc": "Usar fotos de contactos e iconos de remitentes activados cuando estén disponibles.",

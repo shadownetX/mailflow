@@ -1367,6 +1367,9 @@
       "badgeOff": "Deaktiviert"
     },
     "push": {
+      "exampleSubject": "Besprechungsprotokoll",
+      "exampleSnippet": "Hallo, hier ist das Protokoll unserer Besprechung von heute Morgen.",
+      "exampleNow": "jetzt",
       "appearanceTitle": "Darstellung der Benachrichtigungen",
       "avatar": "Absenderbild",
       "avatarDesc": "Kontaktfotos und aktivierte Absendersymbole verwenden, sofern verfügbar.",

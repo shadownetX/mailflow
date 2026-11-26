@@ -1449,6 +1449,9 @@
       "badgeOff": "Désactivé"
     },
     "push": {
+      "exampleSubject": "Compte rendu de réunion",
+      "exampleSnippet": "Bonjour, voici le compte rendu de notre réunion de ce matin.",
+      "exampleNow": "maintenant",
       "appearanceTitle": "Apparence des notifications",
       "avatar": "Avatar de l’expéditeur",
       "avatarDesc": "Utilisez les photos des contacts et les icônes d’expéditeurs activées, si disponibles.",

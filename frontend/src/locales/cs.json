@@ -1612,6 +1612,9 @@
       "badgeOff": "Vypnuto"
     },
     "push": {
+      "exampleSubject": "Zápis ze schůzky",
+      "exampleSnippet": "Dobrý den, zde je zápis z naší dnešní ranní schůzky.",
+      "exampleNow": "právě teď",
       "appearanceTitle": "Vzhled oznámení",
       "avatar": "Avatar odesílatele",
       "avatarDesc": "Použít fotografie kontaktů a povolené ikony odesílatelů, pokud jsou dostupné.",
