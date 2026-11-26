@@ -5,7 +5,7 @@ import { notifyWebhook } from './webhooks.js';
 import { enrichPushPayload } from './pushAppearance.js';
 
 // Called only for alert-eligible INBOX arrivals. Delivery never blocks mail sync.
-export function notifyNewMail({ userId, accountName, alertMessages, alertCount }) {
+export function notifyNewMail({ userId, accountName, accountIcon, alertMessages, alertCount }) {
   const latest = alertMessages[alertMessages.length - 1];
   // Each channel starts independently; webhook failures must never delay Web Push.
   notifyWebhook({ userId, accountName, count: alertCount, latest })
@@ -21,7 +21,7 @@ export function notifyNewMail({ userId, accountName, alertMessages, alertCount }
      FROM users u WHERE u.id = $1`,
     [userId]
   ).then(r => {
-    const payload = enrichPushPayload(basePayload, latest, alertCount, accountName, r.rows[0]?.preferences || {});
+    const payload = enrichPushPayload(basePayload, latest, alertCount, accountName, r.rows[0]?.preferences || {}, accountIcon);
     sendPushToUser(userId, { ...payload, unreadCount: r.rows[0]?.total ?? 0 })
       .catch(err => console.warn('Push notification error:', err.message));
   }).catch(() => {

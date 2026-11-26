@@ -28,7 +28,15 @@ function bounded(value, limit) {
   return Array.from(value.replace(/\s+/gu, ' ').trim()).slice(0, limit).join('');
 }
 
-export function enrichPushPayload(base, latest, count, accountName, preferences = {}) {
+const graphemes = new Intl.Segmenter('en', { granularity: 'grapheme' });
+
+function accountMark(icon) {
+  const value = typeof icon === 'string' ? icon.trim() : '';
+  return value.length <= 32 && [...graphemes.segment(value)].length === 1
+    && /[\p{Emoji_Presentation}\p{Extended_Pictographic}\u20E3]/u.test(value) ? value : '';
+}
+
+export function enrichPushPayload(base, latest, count, accountName, preferences = {}, accountIcon) {
   const appearance = validPushAppearance(preferences.pushAppearance)
     ? preferences.pushAppearance : DEFAULT_PUSH_APPEARANCE;
   const locale = dictionary(preferences.language);
@@ -52,9 +60,11 @@ export function enrichPushPayload(base, latest, count, accountName, preferences 
   payload.body = parts.join('\n');
   const sender = bounded(payload.title, 120);
   const account = appearance.account ? bounded(accountName, 60) : '';
-  // Keep the account in the title, preserving space for both values within the payload limit.
-  payload.title = account
-    ? `${bounded(sender, 120 - 3 - Array.from(account).length)} · ${account}`
+  const mark = account ? accountMark(accountIcon) : '';
+  const accountLabel = mark ? `${mark} ${account}` : account;
+  // Reserve space for the account, keeping a stored emoji intact even if it is a joined sequence.
+  payload.title = accountLabel
+    ? `${bounded(sender, 120 - 3 - Array.from(accountLabel).length)} · ${accountLabel}`
     : sender;
   if (appearance.avatar && count === 1) {
     payload.avatar = {

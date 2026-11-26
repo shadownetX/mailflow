@@ -31,6 +31,26 @@ describe('push appearance', () => {
     expect(payload.body).toBe('Subject\nSecret');
     expect(payload.avatar.name).toBe('Ann');
   });
+  it.each(['🏠', '💼', '🇫🇷', '👩🏽‍💻', '1️⃣', '🏳️‍🌈'])('preserves the configured account emoji %s', icon => {
+    const payload = enrichPushPayload(base, latest, 1, 'Work', { pushAppearance: { avatar: true, account: true, preview: true } }, icon);
+    expect(payload.title).toBe(`Ann · ${icon} Work`);
+    expect(payload.body).toBe('Subject\nSecret');
+    expect(payload.avatar.name).toBe('Ann');
+  });
+  it.each([undefined, null, '', '   ', 'not an emoji', '🏠💼', '<svg>'])('omits absent or invalid account icons (%s)', icon => {
+    expect(enrichPushPayload(base, latest, 1, 'Work', { pushAppearance: { avatar: false, account: true, preview: false } }, icon).title).toBe('Ann · Work');
+  });
+  it('hides account icon together with the account name when disabled or unnamed', () => {
+    expect(enrichPushPayload(base, latest, 1, 'Work', {}, '🏠')).toEqual(base);
+    const prefs = { pushAppearance: { avatar: false, account: true, preview: false } };
+    expect(enrichPushPayload(base, latest, 1, '', prefs, '🏠').title).toBe('Ann');
+  });
+  it('keeps a joined emoji intact when truncating long titles', () => {
+    const icon = '👩🏽‍💻';
+    const payload = enrichPushPayload({ ...base, title: 'A'.repeat(500) }, latest, 1, 'B'.repeat(500), { pushAppearance: { avatar: false, account: true, preview: false } }, icon);
+    expect(Array.from(payload.title)).toHaveLength(120);
+    expect(payload.title.endsWith(` · ${icon} ` + 'B'.repeat(60))).toBe(true);
+  });
   it('bounds unusually large notifications', () => {
     const payload = enrichPushPayload({ ...base, title: '😀'.repeat(500), body: '😀'.repeat(500) }, { ...latest, snippet: '😀'.repeat(500) }, 1, '😀'.repeat(500), { pushAppearance: { avatar: true, account: true, preview: true } });
     expect(Array.from(payload.title)).toHaveLength(120);

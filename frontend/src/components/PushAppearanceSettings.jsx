@@ -66,7 +66,7 @@ export default function PushAppearanceSettings({ userId }) {
         </div>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>
-            <div style={{ fontWeight: 600 }}>{'Camille Martin'}{appearance.account && ` · ${t('admin.push.exampleAccount')}`}</div>
+            <div style={{ fontWeight: 600 }}>{'Camille Martin'}{appearance.account && ` · 🏠 ${t('admin.push.exampleAccount')}`}</div>
             <div>{t('admin.push.exampleSubject')}</div>
             {appearance.preview && <div style={{ color: 'var(--text-secondary)' }}>{t('admin.push.exampleSnippet')}</div>}
           </div>
